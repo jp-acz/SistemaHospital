@@ -1,20 +1,18 @@
-// src/controllers/pacientesController.js
-const { executeProcedure } = require('../config/database');
+// Backend/src/controllers/pacientesController.js
+const { executeQuery, executeRun } = require('../config/database');
 
 class PacientesController {
   async create(req, res) {
     try {
       const { nombre, edad, direccion, telefono } = req.body;
-      const result = await executeProcedure('sp_Pacientes_Create', {
-        nombre,
-        edad,
-        direccion,
-        telefono
-      });
+      const result = await executeRun(
+        'INSERT INTO Pacientes (nombre, edad, direccion, telefono) VALUES (?, ?, ?, ?)',
+        [nombre, edad, direccion, telefono]
+      );
       res.status(201).json({
         success: true,
         message: 'Paciente creado exitosamente',
-        data: result[0]
+        data: { ID: result.lastID, nombre, edad, direccion, telefono }
       });
     } catch (error) {
       res.status(500).json({
@@ -27,7 +25,7 @@ class PacientesController {
 
   async getAll(req, res) {
     try {
-      const result = await executeProcedure('sp_Pacientes_ReadAll');
+      const result = await executeQuery('SELECT * FROM Pacientes WHERE Estado = 1');
       res.status(200).json({
         success: true,
         data: result
@@ -44,7 +42,7 @@ class PacientesController {
   async getById(req, res) {
     try {
       const { id } = req.params;
-      const result = await executeProcedure('sp_Pacientes_ReadById', { ID: id });
+      const result = await executeQuery('SELECT * FROM Pacientes WHERE ID = ? AND Estado = 1', [id]);
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
@@ -53,7 +51,7 @@ class PacientesController {
       }
       res.status(200).json({
         success: true,
-        data: result[0]
+        data: result
       });
     } catch (error) {
       res.status(500).json({
@@ -68,17 +66,14 @@ class PacientesController {
     try {
       const { id } = req.params;
       const { nombre, edad, direccion, telefono } = req.body;
-      const result = await executeProcedure('sp_Pacientes_Update', {
-        ID: id,
-        nombre,
-        edad,
-        direccion,
-        telefono
-      });
+      await executeRun(
+        'UPDATE Pacientes SET nombre = ?, edad = ?, direccion = ?, telefono = ? WHERE ID = ?',
+        [nombre, edad, direccion, telefono, id]
+      );
       res.status(200).json({
         success: true,
         message: 'Paciente actualizado exitosamente',
-        data: result[0]
+        data: { ID: id, nombre, edad, direccion, telefono }
       });
     } catch (error) {
       res.status(500).json({
@@ -92,7 +87,7 @@ class PacientesController {
   async delete(req, res) {
     try {
       const { id } = req.params;
-      await executeProcedure('sp_Pacientes_Delete', { ID: id });
+      await executeRun('UPDATE Pacientes SET Estado = 0 WHERE ID = ?', [id]);
       res.status(200).json({
         success: true,
         message: 'Paciente eliminado exitosamente'

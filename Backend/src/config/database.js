@@ -1,39 +1,43 @@
-// backend/src/config/database.js
-const sql = require('mssql');
-require('dotenv').config();
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const dbPath = path.join(__dirname, '../../database/hospital.db');
+let db = null;
 
-const dbConfig = {
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER,
-    database: process.env.DB_NAME,
-    port: parseInt(process.env.DB_PORT) || 1433,
-    options: {
-    encrypt: process.env.DB_ENCRYPT === 'true',
-    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',
-    enableArithAbort: true
-},
-pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000
-}
-};
-
-let pool = null;
-
-async function getConnection() {
-try {
-    if (pool) {
-    return pool;
+function getConnection() {
+return new Promise((resolve) => {
+    if (db) {
+    console.log('✓ SQLite ya conectado');
+    return resolve(db);
     }
-    pool = await sql.connect(dbConfig);
-    console.log('✓ Conexión exitosa a SQL Server');
-    return pool;
-} catch (error) {
-    console.error('✗ Error al conectar con SQL Server:', error);
-    throw error;
-}
+    db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('✗ Error SQLite:', err.message);
+    } else {
+        console.log('✓ Conexión SQLite exitosa');
+    }
+    resolve(db);
+    });
+});
 }
 
-module.exports = { sql, getConnection };
+async function executeQuery(sql, params = []) {
+const database = await getConnection();
+return new Promise((resolve, reject) => {
+    database.all(sql, params, (err, rows) => {
+    if (err) reject(err);
+    else resolve(rows || []);
+    });
+});
+}
+
+async function executeRun(sql, params = []) {
+const database = await getConnection();
+return new Promise((resolve, reject) => {
+    database.run(sql, params, function(err) {
+    if (err) reject(err);
+    else resolve({ lastID: this.lastID });
+    });
+});
+}
+
+module.exports = { getConnection, executeQuery, executeRun };
