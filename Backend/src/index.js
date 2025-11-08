@@ -4,6 +4,22 @@ const { getConnection } = require('./config/database');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 'localhost';
+const { crearTablaAuditoria } = require('./config/audit-table');
+
+async function startServer() {
+  try {
+    await getConnection();
+    await crearTablaAuditoria();
+    
+    app.listen(PORT, HOST, () => {
+      console.log('\n🏥 SERVIDOR HOSPITALARIO CON CONSULTAS AVANZADAS');
+      console.log('📊 Consultas disponibles en: http://localhost:3000/api/consultas/');
+    });
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  }
+}
+
 
 async function startServer() {
   try {

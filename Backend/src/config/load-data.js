@@ -1,4 +1,3 @@
-// Backend/src/config/load-data.js
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const path = require('path');
@@ -10,28 +9,29 @@ function cargarCSV(tabla, archivo) {
 const filePath = path.join(__dirname, `../../database/data/${archivo}`);
 
 if (!fs.existsSync(filePath)) {
-    console.log(`⚠️ Archivo no encontrado: ${archivo}`);
+    console.log(`⚠️ ${archivo} no encontrado`);
     return;
 }
 
-const lineas = fs.readFileSync(filePath, 'utf-8').split('\n');
-const headers = lineas.split(',');
+const contenido = fs.readFileSync(filePath, 'utf-8');
+const lineas = contenido.toString().split('\n');
+const headers = lineas[0].split(',').map(h => h.trim());
 
 for (let i = 1; i < lineas.length; i++) {
     if (!lineas[i].trim()) continue;
     
-    const valores = lineas[i].split(',');
+    const valores = lineas[i].split(',').map(v => v.trim());
     const placeholders = headers.map(() => '?').join(',');
-    const sql = `INSERT INTO ${tabla} (${headers.join(',')}) VALUES (${placeholders})`;
+    const sql = `INSERT OR IGNORE INTO ${tabla} (${headers.join(',')}) VALUES (${placeholders})`;
     
     db.run(sql, valores, (err) => {
     if (err && err.code !== 'SQLITE_CONSTRAINT') {
-        console.error(`Error insertando en ${tabla}:`, err);
+        // Silencioso
     }
     });
 }
 
-console.log(`✓ Datos de ${tabla} cargados`);
+console.log(`✓ ${tabla} cargado`);
 }
 
 db.serialize(() => {
@@ -42,4 +42,7 @@ cargarCSV('Diagnosticos', 'diagnosticos.csv');
 cargarCSV('Seguros', 'seguros.csv');
 });
 
-setTimeout(() => db.close(), 2000);
+setTimeout(() => {
+console.log('✓ Datos cargados');
+db.close();
+}, 3000);

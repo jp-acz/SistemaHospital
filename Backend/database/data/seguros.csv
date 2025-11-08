@@ -1,13 +1,13 @@
-id_seguro,tipo,compañia,id_paciente
-1,Premium,Seguros Médicos del País,1
-2,Básico,Salud Total,2
-3,Premium,Seguros Médicos del País,3
-4,Estándar,Clínica Plus,4
-5,Premium,Seguros Médicos del País,5
-6,Básico,Salud Total,6
-7,Estándar,Clínica Plus,7
-8,Premium,Seguros Médicos del País,8
-9,Básico,Salud Total,9
-10,Estándar,Clínica Plus,10
-11,Premium,Seguros Médicos del País,11
-12,Básico,Salud Total,12
+ID,paciente_id,empresa_seguro,numero_poliza
+1,1,Salud Total,POL-001-2025
+2,2,Seguros Medicos Plus,POL-002-2025
+3,3,Clinisalud,POL-003-2025
+4,4,Vida Segura,POL-004-2025
+5,5,Mediplus,POL-005-2025
+6,6,Salud Integral,POL-006-2025
+7,7,Premium Health,POL-007-2025
+8,8,Axa Seguros,POL-008-2025
+9,9,Mapfre Medico,POL-009-2025
+10,10,Seguros Monterrey,POL-010-2025
+11,11,Salud y Vida,POL-011-2025
+12,12,Protección Médica,POL-012-2025

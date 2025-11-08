@@ -1221,4 +1221,61 @@ footer p {
     transform: rotate(360deg);
   }
 }
-```
+/* ESTILOS PARA LAS CONSULTAS */
+.resultado-container {
+    margin-top: 30px;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 5px;
+    max-height: 600px;
+    overflow-y: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.resultado-container h3 {
+    color: #333;
+    margin-top: 0;
+}
+
+.resultado-container p {
+    color: #555;
+    font-size: 14px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: #ffffff;
+}
+
+.data-table thead {
+    background: #2c3e50;
+    color: #ffffff;
+}
+
+.data-table th {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #34495e;
+    font-weight: bold;
+}
+
+.data-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border: 1px solid #ecf0f1;
+    color: #333333;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.data-table tbody tr:hover {
+    background: #e8f4f8;
+}
+
+.data-table tbody tr:nth-child(odd) {
+    background: #ffffff;
+}

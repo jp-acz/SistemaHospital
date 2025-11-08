@@ -1,13 +1,13 @@
-ID,nombre,edad,direccion,telefono
-1,Juan Pérez,45,Calle Principal 123,555-0001
-2,María García,38,Avenida Central 456,555-0002
-3,Carlos López,52,Calle Secundaria 789,555-0003
-4,Ana Martínez,35,Av. República 101,555-0004
-5,Pedro Rodríguez,48,Calle Libertad 202,555-0005
-6,Laura Fernández,42,Avenida Paz 303,555-0006
-7,Miguel Sánchez,55,Calle Salud 404,555-0007
-8,Carmen Díaz,39,Avenida Médica 505,555-0008
-9,José Torres,61,Calle Hospital 606,555-0009
-10,Isabel Ramírez,36,Avenida Clínica 707,555-0010
-11,Diego Romero,47,Calle General 808,555-0011
-12,Patricia Jiménez,44,Avenida Especial 909,555-0012
+ID,nombre,edad,direccion,telefono,Estado
+1,Juan Pérez,45,Calle Principal 123,555-0001,1
+2,María García,38,Av. Central 456,555-0002,1
+3,Carlos López,52,Plaza Mayor 789,555-0003,1
+4,Ana Martínez,41,Calle del Sol 321,555-0004,1
+5,Roberto Sánchez,56,Av. del Mar 654,555-0005,1
+6,Isabel Rodríguez,33,Paseo Verde 987,555-0006,1
+7,Miguel Fernández,48,Calle Rosa 111,555-0007,1
+8,Laura Jiménez,39,Av. Libertad 222,555-0008,1
+9,Diego Ruiz,44,Plaza Central 333,555-0009,1
+10,Sofía Moreno,50,Calle Azul 444,555-0010,1
+11,Pablo Navarro,37,Av. Real 555,555-0011,1
+12,Elena Castro,46,Calle Blanca 666,555-0012,1

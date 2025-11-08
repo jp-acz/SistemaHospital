@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 {
-=======
-﻿{
->>>>>>> 6215696717c14626b1eb509509eaf168f9906553
   "name": "hospital-management-backend",
   "version": "1.0.0",
   "description": "Backend API para Sistema de Gestión Hospitalaria",
@@ -12,19 +8,10 @@
     "dev": "nodemon src/index.js"
   },
   "dependencies": {
-<<<<<<< HEAD
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "csv-parser": "^3.2.0",
-    "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "sqlite3": "^5.1.7"
-=======
-    "express": "^4.18.2",
-    "mssql": "^10.0.1",
+    "sqlite3": "^5.1.6",
     "dotenv": "^16.3.1",
     "cors": "^2.8.5",
     "body-parser": "^1.20.2"
->>>>>>> 6215696717c14626b1eb509509eaf168f9906553
   }
 }

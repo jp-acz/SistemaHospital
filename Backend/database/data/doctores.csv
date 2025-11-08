@@ -1,9 +1,7 @@
 ID,nombre,especialidad,telefono
-1,Dr. Roberto Silva,Cardiología,555-1001
-2,Dra. Ana López,Pediatría,555-1002
-3,Dr. Carlos Mendez,Neurología,555-1003
-4,Dr. Fernando González,Oftalmología,555-1004
-5,Dra. Lucía Rodríguez,Dermatología,555-1005
-6,Dr. Javier Martín,Cirugía General,555-1006
-7,Dra. Elena Castillo,Psiquiatría,555-1007
-8,Dr. Ricardo Vega,Traumatología,555-1008
+1,Dr. Luis Martín,Cardiología,555-1001
+2,Dra. Carmen López,Pediatría,555-1002
+3,Dr. Antonio Ruiz,Neurología,555-1003
+4,Dra. Patricia Gómez,Dermatología,555-1004
+5,Dr. Fernando Castro,Oncología,555-1005
+6,Dra. Marta Flores,Oftalmología,555-1006
