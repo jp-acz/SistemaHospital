@@ -21,16 +21,6 @@ package-lock.json
 yarn.lock
 
 # -------------------------------
-# Entornos (NO subir credenciales)
-# -------------------------------
-.env
-.env.local
-.env.*.local
-.env.development
-.env.production
-.env.test
-
-# -------------------------------
 # Base de datos (artefactos binarios)
 # (Se versionan SOLO los scripts .sql)
 # -------------------------------
