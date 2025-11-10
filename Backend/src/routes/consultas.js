@@ -1,115 +1,117 @@
 const express = require('express');
 const router = express.Router();
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { executeQuery } = require('../config/database');
 
-const dbPath = path.join(__dirname, '../../database/hospital.db');
-
-function executeQuery(sql) {
-  return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath);
-    db.all(sql, (err, rows) => {
-      db.close();
-      if (err) reject(err);
-      else resolve(rows || []);
-    });
-  });
-}
-
-// Vista 1: Pacientes con citas
+// Consulta 1: Pacientes con Citas (INNER JOIN)
 router.get('/pacientes-citas', async (req, res) => {
-  try {
-    const sql = `SELECT p.ID, p.nombre, p.edad, d.nombre as doctor, d.especialidad, c.fecha, c.hora 
-                 FROM Pacientes p 
-                 INNER JOIN Citas c ON p.ID = c.paciente_id 
-                 INNER JOIN Doctores d ON c.doctor_id = d.ID`;
-    const data = await executeQuery(sql);
-    res.json({
-      success: true,
-      titulo: 'Pacientes con Citas (INNER JOIN)',
-      descripcion: 'Unión de pacientes, citas y doctores',
-      data: data
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+    try {
+        const data = await executeQuery('SELECT * FROM vw_PacientesCitas ORDER BY fecha DESC');
+        res.json({
+            success: true,
+            titulo: 'Pacientes con Citas (INNER JOIN)',
+            descripcion: 'Vista de pacientes con sus citas y doctores',
+            data
+        });
+    } catch (error) {
+        console.error('Error en /pacientes-citas:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
-// Vista 2: Doctores estadísticas
+// Consulta 2: Estadísticas de Doctores (GROUP BY)
 router.get('/doctores-estadisticas', async (req, res) => {
-  try {
-    const sql = `SELECT d.ID, d.nombre, d.especialidad, COUNT(c.ID) as total_citas 
-                 FROM Doctores d 
-                 LEFT JOIN Citas c ON d.ID = c.doctor_id 
-                 GROUP BY d.ID`;
-    const data = await executeQuery(sql);
-    res.json({
-      success: true,
-      titulo: 'Estadísticas de Doctores (GROUP BY)',
-      descripcion: 'Cantidad de citas por doctor',
-      data: data
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+    try {
+        const data = await executeQuery('SELECT * FROM vw_DoctoresEstadisticas ORDER BY TotalCitas DESC');
+        res.json({
+            success: true,
+            titulo: 'Estadísticas de Doctores (GROUP BY)',
+            descripcion: 'Resumen de citas por doctor',
+            data
+        });
+    } catch (error) {
+        console.error('Error en /doctores-estadisticas:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
-// Vista 3: Pacientes sin citas
+// Consulta 3: Pacientes sin Citas (Subconsulta NOT IN)
 router.get('/pacientes-sin-citas', async (req, res) => {
-  try {
-    const sql = `SELECT p.ID, p.nombre, p.edad 
-                 FROM Pacientes p 
-                 WHERE p.ID NOT IN (SELECT DISTINCT paciente_id FROM Citas)`;
-    const data = await executeQuery(sql);
-    res.json({
-      success: true,
-      titulo: 'Pacientes sin Citas (Subconsulta NOT IN)',
-      descripcion: 'Pacientes que no tienen citas asignadas',
-      data: data
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+    try {
+        const data = await executeQuery('SELECT * FROM vw_PacientesSinCitas');
+        res.json({
+            success: true,
+            titulo: 'Pacientes sin Citas (Subconsulta NOT IN)',
+            descripcion: 'Pacientes que no tienen citas programadas',
+            data
+        });
+    } catch (error) {
+        console.error('Error en /pacientes-sin-citas:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
-// Vista 4: Citas próximas
+// Consulta 4: Citas Próximas (Fecha Futura)
 router.get('/citas-proximas', async (req, res) => {
-  try {
-    const sql = `SELECT c.ID, p.nombre as paciente, d.nombre as doctor, c.fecha, c.hora 
-                 FROM Citas c 
-                 INNER JOIN Pacientes p ON c.paciente_id = p.ID 
-                 INNER JOIN Doctores d ON c.doctor_id = d.ID 
-                 ORDER BY c.fecha LIMIT 10`;
-    const data = await executeQuery(sql);
-    res.json({
-      success: true,
-      titulo: 'Citas Próximas (ORDER BY)',
-      descripcion: 'Ultimas 10 citas programadas',
-      data: data
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+    try {
+        const data = await executeQuery('SELECT * FROM vw_CitasProximas ORDER BY fecha ASC');
+        res.json({
+            success: true,
+            titulo: 'Citas Próximas (Fecha Futura)',
+            descripcion: 'Citas programadas para fechas futuras',
+            data
+        });
+    } catch (error) {
+        console.error('Error en /citas-proximas:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
-// Vista 5: Diagnósticos por especialidad
+// Consulta 5: Diagnósticos por Especialidad (GROUP BY)
 router.get('/diagnosticos-especialidad', async (req, res) => {
-  try {
-    const sql = `SELECT d.especialidad, dg.diagnostico, COUNT(*) as cantidad 
-                 FROM Diagnosticos dg 
-                 INNER JOIN Citas c ON dg.cita_id = c.ID 
-                 INNER JOIN Doctores d ON c.doctor_id = d.ID 
-                 GROUP BY d.especialidad, dg.diagnostico`;
-    const data = await executeQuery(sql);
-    res.json({
-      success: true,
-      titulo: 'Diagnósticos por Especialidad (GROUP BY)',
-      descripcion: 'Diagnósticos agrupados por tipo de especialidad',
-      data: data
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+    try {
+        const data = await executeQuery('SELECT * FROM vw_DiagnosticosPorEspecialidad ORDER BY especialidad, TotalDiagnosticos DESC');
+        res.json({
+            success: true,
+            titulo: 'Diagnósticos por Especialidad (GROUP BY)',
+            descripcion: 'Frecuencia de diagnósticos agrupados por especialidad',
+            data
+        });
+    } catch (error) {
+        console.error('Error en /diagnosticos-especialidad:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Consulta 6: Diagnósticos Completos (INNER JOIN múltiple)
+router.get('/diagnosticos-completos', async (req, res) => {
+    try {
+        const data = await executeQuery('SELECT * FROM vw_DiagnosticosCompletos ORDER BY FechaCita DESC');
+        res.json({
+            success: true,
+            titulo: 'Diagnósticos Completos (INNER JOIN)',
+            descripcion: 'Información detallada de diagnósticos con pacientes y doctores',
+            data
+        });
+    } catch (error) {
+        console.error('Error en /diagnosticos-completos:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Consulta 7: Seguros Activos (INNER JOIN)
+router.get('/seguros-activos', async (req, res) => {
+    try {
+        const data = await executeQuery('SELECT * FROM vw_SegurosActivos ORDER BY PacienteNombre');
+        res.json({
+            success: true,
+            titulo: 'Seguros Activos (INNER JOIN)',
+            descripcion: 'Pacientes con seguro médico activo',
+            data
+        });
+    } catch (error) {
+        console.error('Error en /seguros-activos:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 module.exports = router;

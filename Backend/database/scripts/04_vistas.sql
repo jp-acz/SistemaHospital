@@ -1,250 +1,297 @@
--- database/scripts/04_vistas_hospital.sql
--- Vistas avanzadas con JOINs, subconsultas y funciones de ventana
-
+﻿-- ========================================
+-- VISTAS Y CONSULTAS AVANZADAS
+-- Cumpliendo requisitos 4 y 5
+-- ========================================
 USE HospitalDB;
 GO
 
--- ===================================================
--- VISTA 1: Citas con información completa (INNER JOIN)
--- ===================================================
-CREATE OR ALTER VIEW vw_CitasCompletas AS
+PRINT '📊 Creando vistas y consultas avanzadas...';
+GO
+
+-- =============================================
+-- VISTA 1: Pacientes con Citas (INNER JOIN)
+-- Requisito 4a: Usa INNER JOIN
+-- =============================================
+CREATE OR ALTER VIEW vw_PacientesCitas AS
 SELECT 
-    c.ID AS CitaID,
     p.ID AS PacienteID,
     p.nombre AS PacienteNombre,
+    p.edad,
+    c.ID AS CitaID,
+    c.fecha,
+    d.nombre AS DoctorNombre,
+    d.especialidad
+FROM Pacientes p
+INNER JOIN Citas c ON p.ID = c.paciente_id
+INNER JOIN Doctores d ON c.doctor_id = d.ID;
+GO
+
+-- =============================================
+-- VISTA 2: Doctores con Estadísticas (LEFT JOIN + GROUP BY)
+-- Requisito 4a: Usa LEFT JOIN
+-- Requisito 5a: Usa funciones de agregación
+-- =============================================
+CREATE OR ALTER VIEW vw_DoctoresEstadisticas AS
+SELECT 
     d.ID AS DoctorID,
     d.nombre AS DoctorNombre,
     d.especialidad,
-    c.fecha,
-    c.hora,
-    CONCAT(c.fecha, ' ', c.hora) AS FechaHora,
-    c.estado,
-    c.motivo
-FROM Citas c
+    COUNT(c.ID) AS TotalCitas,
+    COUNT(DISTINCT c.paciente_id) AS PacientesUnicos
+FROM Doctores d
+LEFT JOIN Citas c ON d.ID = c.doctor_id
+GROUP BY d.ID, d.nombre, d.especialidad;
+GO
+
+-- =============================================
+-- VISTA 3: Pacientes sin Citas (Subconsulta en WHERE - NOT IN)
+-- Requisito 4b: Subconsulta tipo 1 (NOT IN)
+-- =============================================
+CREATE OR ALTER VIEW vw_PacientesSinCitas AS
+SELECT 
+    ID, 
+    nombre, 
+    edad,
+    direccion, 
+    telefono
+FROM Pacientes
+WHERE ID NOT IN (
+    SELECT DISTINCT paciente_id 
+    FROM Citas 
+    WHERE paciente_id IS NOT NULL
+);
+GO
+
+-- =============================================
+-- VISTA 4: Doctores más solicitados (Subconsulta correlacionada)
+-- Requisito 4b: Subconsulta correlacionada
+-- =============================================
+CREATE OR ALTER VIEW vw_DoctoresPopulares AS
+SELECT TOP 100 PERCENT
+    d.ID,
+    d.nombre,
+    d.especialidad,
+    (SELECT COUNT(*) FROM Citas c WHERE c.doctor_id = d.ID) AS TotalCitas
+FROM Doctores d
+WHERE (SELECT COUNT(*) FROM Citas c WHERE c.doctor_id = d.ID) >= 1
+ORDER BY TotalCitas DESC;
+GO
+
+-- =============================================
+-- VISTA 5: Ranking de Pacientes (Funciones de ventana)
+-- Requisito 4c: Funciones de ventana (ROW_NUMBER, RANK, DENSE_RANK)
+-- Requisito 5a: Uso de ROW_NUMBER(), RANK(), DENSE_RANK()
+-- =============================================
+CREATE OR ALTER VIEW vw_RankingPacientes AS
+SELECT 
+    p.ID,
+    p.nombre,
+    p.edad,
+    COUNT(c.ID) AS TotalCitas,
+    ROW_NUMBER() OVER (ORDER BY COUNT(c.ID) DESC) AS RowNumber,
+    RANK() OVER (ORDER BY COUNT(c.ID) DESC) AS Ranking,
+    DENSE_RANK() OVER (ORDER BY COUNT(c.ID) DESC) AS DenseRanking
+FROM Pacientes p
+LEFT JOIN Citas c ON p.ID = c.paciente_id
+GROUP BY p.ID, p.nombre, p.edad;
+GO
+
+-- =============================================
+-- VISTA 6: Diagnósticos con acumulados (SUM OVER PARTITION BY)
+-- Requisito 5a: Usa SUM() OVER(PARTITION BY ...)
+-- =============================================
+CREATE OR ALTER VIEW vw_DiagnosticosAcumulados AS
+SELECT 
+    diag.ID AS DiagnosticoID,
+    p.nombre AS PacienteNombre,
+    d.nombre AS DoctorNombre,
+    d.especialidad,
+    c.fecha AS FechaCita,
+    diag.diagnostico,
+    diag.tratamiento,
+    COUNT(*) OVER (PARTITION BY d.especialidad) AS DiagnosticosPorEspecialidad,
+    ROW_NUMBER() OVER (PARTITION BY p.ID ORDER BY c.fecha) AS NumeroConsultaPaciente
+FROM Diagnosticos diag
+INNER JOIN Citas c ON diag.id_cita = c.ID
 INNER JOIN Pacientes p ON c.paciente_id = p.ID
 INNER JOIN Doctores d ON c.doctor_id = d.ID;
 GO
 
--- ===================================================
--- VISTA 2: Diagnósticos con detalles (INNER JOIN múltiple)
--- ===================================================
-CREATE OR ALTER VIEW vw_DiagnosticosCompletos AS
+-- =============================================
+-- VISTA 7: Citas con Seguros (LEFT JOIN múltiple)
+-- Requisito 4a: Múltiples JOINs
+-- =============================================
+CREATE OR ALTER VIEW vw_CitasConSeguro AS
 SELECT 
-    diag.ID AS DiagnosticoID,
     c.ID AS CitaID,
     p.nombre AS PacienteNombre,
     d.nombre AS DoctorNombre,
     d.especialidad,
     c.fecha,
-    diag.diagnostico,
-    diag.tratamiento,
-    diag.medicamentos,
-    diag.recomendaciones,
-    diag.FechaRegistro
-FROM Diagnosticos diag
-INNER JOIN Citas c ON diag.cita_id = c.ID
+    s.compañia AS Seguro
+FROM Citas c
+INNER JOIN Pacientes p ON c.paciente_id = p.ID
+INNER JOIN Doctores d ON c.doctor_id = d.ID
+LEFT JOIN Seguros s ON p.ID = s.id_pac;
+GO
+
+-- =============================================
+-- VISTA 8: Análisis temporal con LAG/LEAD
+-- Requisito 5a: Uso de LAG() o LEAD()
+-- =============================================
+CREATE OR ALTER VIEW vw_AnalisisTemporal AS
+SELECT 
+    c.ID,
+    p.nombre AS PacienteNombre,
+    d.nombre AS DoctorNombre,
+    c.fecha,
+    LAG(c.fecha) OVER (PARTITION BY c.paciente_id ORDER BY c.fecha) AS CitaAnterior,
+    LEAD(c.fecha) OVER (PARTITION BY c.paciente_id ORDER BY c.fecha) AS CitaSiguiente
+FROM Citas c
 INNER JOIN Pacientes p ON c.paciente_id = p.ID
 INNER JOIN Doctores d ON c.doctor_id = d.ID;
 GO
 
--- ===================================================
--- VISTA 3: Pacientes con seguro (LEFT JOIN)
--- ===================================================
-CREATE OR ALTER VIEW vw_PacientesConSeguro AS
-SELECT 
-    p.ID,
-    p.nombre AS PacienteNombre,
-    p.edad,
-    p.telefono,
-    ISNULL(s.tipo, 'Sin Seguro') AS TipoSeguro,
-    ISNULL(s.compañia, 'N/A') AS CompañiaSeguro,
-    ISNULL(s.numeroPoliza, 'N/A') AS NumeroPoliza,
-    COUNT(c.ID) AS TotalCitas
-FROM Pacientes p
-LEFT JOIN Seguros s ON p.ID = s.id_paciente AND s.estado = 1
-LEFT JOIN Citas c ON p.ID = c.paciente_id
-WHERE p.Estado = 1
-GROUP BY p.ID, p.nombre, p.edad, p.telefono, s.tipo, s.compañia, s.numeroPoliza;
+PRINT '✓ Vistas creadas correctamente';
 GO
 
--- ===================================================
--- VISTA 4: Citas pendientes (subconsulta correlacionada)
--- ===================================================
-CREATE OR ALTER VIEW vw_CitasPendientes AS
-SELECT 
-    p.ID AS PacienteID,
-    p.nombre AS PacienteNombre,
-    (SELECT COUNT(*) FROM Citas WHERE paciente_id = p.ID AND estado = 'Programada') AS CitasProgramadas,
-    (SELECT TOP 1 fecha FROM Citas WHERE paciente_id = p.ID AND estado = 'Programada' ORDER BY fecha) AS ProxCita,
-    (SELECT TOP 1 d.nombre FROM Citas c
-     INNER JOIN Doctores d ON c.doctor_id = d.ID
-     WHERE c.paciente_id = p.ID AND c.estado = 'Programada'
-     ORDER BY c.fecha) AS ProxDoctor
-FROM Pacientes p
-WHERE p.Estado = 1
-AND EXISTS (SELECT 1 FROM Citas WHERE paciente_id = p.ID AND estado = 'Programada');
+-- =============================================
+-- CONSULTA CON CTE #1: Pacientes con múltiples citas
+-- Requisito 4d: Uso de CTE
+-- =============================================
+PRINT '📋 Ejemplo de CTE #1: Pacientes con múltiples citas';
 GO
 
--- ===================================================
--- VISTA 5: Ranking de especialidades (Función de ventana)
--- ===================================================
-CREATE OR ALTER VIEW vw_RankingEspecialidades AS
+WITH CitasPorPaciente AS (
+    SELECT 
+        p.ID,
+        p.nombre,
+        COUNT(c.ID) AS TotalCitas
+    FROM Pacientes p
+    LEFT JOIN Citas c ON p.ID = c.paciente_id
+    GROUP BY p.ID, p.nombre
+)
 SELECT 
+    ID,
+    nombre,
+    TotalCitas
+FROM CitasPorPaciente
+WHERE TotalCitas > 1
+ORDER BY TotalCitas DESC;
+GO
+
+-- =============================================
+-- CONSULTA CON CTE #2: Especialidades con mayor demanda
+-- Requisito 4d: Uso de CTE anidado
+-- =============================================
+PRINT '📋 Ejemplo de CTE #2: Ranking de especialidades';
+GO
+
+WITH CitasPorDoctor AS (
+    SELECT 
+        d.ID,
+        d.nombre,
+        d.especialidad,
+        COUNT(c.ID) AS TotalCitas
+    FROM Doctores d
+    LEFT JOIN Citas c ON d.ID = c.doctor_id
+    GROUP BY d.ID, d.nombre, d.especialidad
+),
+EspecialidadesRanking AS (
+    SELECT 
+        especialidad,
+        SUM(TotalCitas) AS CitasTotales,
+        RANK() OVER (ORDER BY SUM(TotalCitas) DESC) AS Ranking
+    FROM CitasPorDoctor
+    GROUP BY especialidad
+)
+SELECT 
+    especialidad,
+    CitasTotales,
+    Ranking
+FROM EspecialidadesRanking
+WHERE Ranking <= 3;
+GO
+
+-- =============================================
+-- CONSULTA CON CTE #3: Análisis de diagnósticos
+-- Requisito 4b: Subconsulta en FROM
+-- =============================================
+PRINT '📋 Ejemplo de CTE #3: Diagnósticos por doctor';
+GO
+
+WITH DiagnosticosPorDoctor AS (
+    SELECT 
+        d.ID AS DoctorID,
+        d.nombre AS DoctorNombre,
+        d.especialidad,
+        COUNT(diag.ID) AS TotalDiagnosticos
+    FROM Doctores d
+    INNER JOIN Citas c ON d.ID = c.doctor_id
+    INNER JOIN Diagnosticos diag ON c.ID = diag.id_cita
+    GROUP BY d.ID, d.nombre, d.especialidad
+)
+SELECT 
+    DoctorID,
+    DoctorNombre,
+    especialidad,
+    TotalDiagnosticos,
+    RANK() OVER (PARTITION BY especialidad ORDER BY TotalDiagnosticos DESC) AS RankingEnEspecialidad
+FROM DiagnosticosPorDoctor;
+GO
+
+-- VISTA: Citas próximas (sin LIMIT, usando TOP/fecha)
+CREATE OR ALTER VIEW vw_CitasProximas AS
+SELECT
+    c.ID         AS CitaID,
+    p.nombre     AS PacienteNombre,
+    d.nombre     AS DoctorNombre,
     d.especialidad,
-    COUNT(c.ID) AS TotalCitas,
-    COUNT(DISTINCT c.paciente_id) AS TotalPacientes,
-    AVG(p.edad) AS EdadPromedioPacientes,
-    ROW_NUMBER() OVER (ORDER BY COUNT(c.ID) DESC) AS RankingCitas,
-    RANK() OVER (ORDER BY COUNT(DISTINCT c.paciente_id) DESC) AS RankingPacientes,
-    PERCENT_RANK() OVER (ORDER BY COUNT(c.ID) DESC) AS PercentilCitas
-FROM Doctores d
-LEFT JOIN Citas c ON d.ID = c.doctor_id
-LEFT JOIN Pacientes p ON c.paciente_id = p.ID
-WHERE d.Estado = 1
+    c.fecha
+FROM Citas c
+INNER JOIN Pacientes p ON p.ID = c.paciente_id
+INNER JOIN Doctores  d ON d.ID = c.doctor_id
+WHERE CAST(c.fecha AS date) >= CAST(GETDATE() AS date);
+GO
+
+-- VISTA: Diagnósticos por especialidad (agregación)
+CREATE OR ALTER VIEW vw_DiagnosticosPorEspecialidad AS
+SELECT
+    d.especialidad,
+    COUNT(diag.ID) AS TotalDiagnosticos
+FROM Diagnosticos diag
+INNER JOIN Citas c ON c.ID = diag.id_cita
+INNER JOIN Doctores d ON d.ID = c.doctor_id
 GROUP BY d.especialidad;
 GO
 
--- ===================================================
--- VISTA 6: Actividad mensual con funciones de ventana
--- ===================================================
-CREATE OR ALTER VIEW vw_ActividadMensual AS
-SELECT 
-    YEAR(c.fecha) AS Anio,
-    MONTH(c.fecha) AS Mes,
-    DATENAME(MONTH, c.fecha) AS NombreMes,
-    COUNT(c.ID) AS TotalCitas,
-    COUNT(DISTINCT c.paciente_id) AS PacientesAtendidos,
-    COUNT(DISTINCT c.doctor_id) AS DoctoresActivos,
-    SUM(COUNT(c.ID)) OVER (PARTITION BY YEAR(c.fecha) ORDER BY MONTH(c.fecha)) AS AcumuladoAnio,
-    LAG(COUNT(c.ID)) OVER (ORDER BY YEAR(c.fecha), MONTH(c.fecha)) AS CitasMesAnterior,
-    LEAD(COUNT(c.ID)) OVER (ORDER BY YEAR(c.fecha), MONTH(c.fecha)) AS CitasMesSiguiente
-FROM Citas c
-GROUP BY YEAR(c.fecha), MONTH(c.fecha), DATENAME(MONTH, c.fecha);
+-- VISTA: Diagnósticos completos (detalle)
+CREATE OR ALTER VIEW vw_DiagnosticosCompletos AS
+SELECT
+    diag.ID        AS DiagnosticoID,
+    c.ID           AS CitaID,
+    p.nombre       AS PacienteNombre,
+    d.nombre       AS DoctorNombre,
+    d.especialidad,
+    c.fecha        AS FechaCita,
+    diag.diagnostico,
+    diag.tratamiento
+FROM Diagnosticos diag
+INNER JOIN Citas c ON c.ID = diag.id_cita
+INNER JOIN Pacientes p ON p.ID = c.paciente_id
+INNER JOIN Doctores  d ON d.ID = c.doctor_id;
 GO
 
--- ===================================================
--- VISTA 7: Pacientes por rango de edad (Función de ventana)
--- ===================================================
-CREATE OR ALTER VIEW vw_PacientesPorEdad AS
-SELECT 
-    CASE 
-        WHEN edad < 18 THEN 'Menor de edad'
-        WHEN edad BETWEEN 18 AND 30 THEN '18-30 años'
-        WHEN edad BETWEEN 31 AND 45 THEN '31-45 años'
-        WHEN edad BETWEEN 46 AND 60 THEN '46-60 años'
-        ELSE 'Mayor de 60'
-    END AS RangoEdad,
-    COUNT(*) AS TotalPacientes,
-    AVG(edad) AS EdadPromedio,
-    MIN(edad) AS EdadMinima,
-    MAX(edad) AS EdadMaxima,
-    ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) AS RankingPorCantidad
-FROM Pacientes
-WHERE Estado = 1
-GROUP BY 
-    CASE 
-        WHEN edad < 18 THEN 'Menor de edad'
-        WHEN edad BETWEEN 18 AND 30 THEN '18-30 años'
-        WHEN edad BETWEEN 31 AND 45 THEN '31-45 años'
-        WHEN edad BETWEEN 46 AND 60 THEN '46-60 años'
-        ELSE 'Mayor de 60'
-    END;
+-- VISTA: Seguros activos (join simple)
+CREATE OR ALTER VIEW vw_SegurosActivos AS
+SELECT
+    s.ID        AS SeguroID,
+    s.compañia,
+    p.ID        AS PacienteID,
+    p.nombre    AS PacienteNombre
+FROM Seguros s
+INNER JOIN Pacientes p ON p.ID = s.id_pac;
 GO
 
--- ===================================================
--- CTE: Top Doctores por cantidad de citas
--- ===================================================
-CREATE OR ALTER PROCEDURE sp_TopDoctoresPorCitas
-    @TopN INT = 5
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    WITH DoctoresConCitas AS (
-        SELECT 
-            d.ID,
-            d.nombre,
-            d.especialidad,
-            COUNT(c.ID) AS TotalCitas,
-            COUNT(DISTINCT c.paciente_id) AS TotalPacientes,
-            MAX(c.fecha) AS UltimaCita
-        FROM Doctores d
-        LEFT JOIN Citas c ON d.ID = c.doctor_id
-        WHERE d.Estado = 1
-        GROUP BY d.ID, d.nombre, d.especialidad
-    ),
-    DoctoresRankeados AS (
-        SELECT 
-            *,
-            ROW_NUMBER() OVER (ORDER BY TotalCitas DESC) AS Ranking
-        FROM DoctoresConCitas
-    )
-    SELECT TOP (@TopN)
-        Ranking,
-        nombre,
-        especialidad,
-        TotalCitas,
-        TotalPacientes,
-        UltimaCita
-    FROM DoctoresRankeados
-    ORDER BY Ranking;
-END
-GO
-
--- ===================================================
--- CTE: Pacientes con historial completo
--- ===================================================
-CREATE OR ALTER PROCEDURE sp_HistorialPaciente
-    @paciente_id INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    WITH HistorialCitas AS (
-        SELECT 
-            c.ID AS CitaID,
-            c.fecha,
-            c.hora,
-            d.nombre AS DoctorNombre,
-            d.especialidad,
-            c.motivo,
-            c.estado,
-            ROW_NUMBER() OVER (ORDER BY c.fecha DESC) AS NumCita
-        FROM Citas c
-        INNER JOIN Doctores d ON c.doctor_id = d.ID
-        WHERE c.paciente_id = @paciente_id
-    ),
-    DiagnosticosRecientes AS (
-        SELECT 
-            diag.cita_id,
-            diag.diagnostico,
-            diag.tratamiento,
-            ROW_NUMBER() OVER (ORDER BY diag.FechaRegistro DESC) AS NumDiagnostico
-        FROM Diagnosticos diag
-        WHERE diag.cita_id IN (SELECT CitaID FROM HistorialCitas)
-    )
-    SELECT 
-        p.nombre AS PacienteNombre,
-        p.edad,
-        p.direccion,
-        p.telefono,
-        hc.NumCita,
-        hc.CitaID,
-        hc.fecha,
-        hc.hora,
-        hc.DoctorNombre,
-        hc.especialidad,
-        hc.motivo,
-        hc.estado,
-        dr.diagnostico,
-        dr.tratamiento
-    FROM Pacientes p
-    LEFT JOIN HistorialCitas hc ON p.ID = @paciente_id
-    LEFT JOIN DiagnosticosRecientes dr ON hc.CitaID = dr.cita_id AND dr.NumDiagnostico = 1
-    WHERE p.ID = @paciente_id
-    ORDER BY hc.NumCita;
-END
-GO
-
-PRINT '✓ Vistas y consultas avanzadas creadas exitosamente';
+PRINT '✓ Todas las vistas y consultas avanzadas creadas correctamente';
 GO

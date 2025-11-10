@@ -11,8 +11,8 @@
         <!-- Header -->
         <header>
             <div class="header-content">
-                <h1>🏥 Sistema de Gestión Hospitalaria</h1>
-                <p>Administración de Pacientes, Doctores, Citas y Diagnósticos</p>
+                <h1>Sistema de Gestión Hospitalaria</h1>
+                <p>Administración de Pacientes, Doctores, Citas y Diagnósticos - SQL Server</p>
             </div>
         </header>
 
@@ -20,8 +20,9 @@
         <nav class="navbar">
             <ul>
                 <li><a href="#" onclick="showSection('dashboard')" class="active">Dashboard</a></li>
-                <li><a href="#" onclick="showSection('pacientes')">Pacientes</a></li>
-                <li><a href="#" onclick="showSection('consultas')">📊 Consultas Avanzadas</a></li>
+                <li><a href="#" onclick="showSection('crud'); renderCrudForm(document.getElementById('crud-tabla').value)">CRUD</a></li>
+                <li><a href="#" onclick="showSection('consultas')">Consultas Avanzadas</a></li>
+                <li><a href="#" onclick="showSection('ver-tablas')">Ver Tablas</a></li>
                 <li><a href="#" onclick="showSection('api')">API Docs</a></li>
             </ul>
         </nav>
@@ -50,111 +51,136 @@
                 </div>
             </section>
 
-            <!-- Pacientes Section -->
-            <section id="pacientes" class="section">
-                <h2>Gestión de Pacientes</h2>
-                
-                <!-- Form para crear paciente -->
-                <div class="form-container">
-                    <h3>Crear Nuevo Paciente</h3>
-                    <form id="paciente-form" onsubmit="createPaciente(event)">
-                        <div class="form-group">
-                            <label>Nombre:</label>
-                            <input type="text" id="nombre" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Edad:</label>
-                            <input type="number" id="edad" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Dirección:</label>
-                            <input type="text" id="direccion">
-                        </div>
-                        <div class="form-group">
-                            <label>Teléfono:</label>
-                            <input type="tel" id="telefono">
-                        </div>
-                        <button type="submit" class="btn-primary">Crear Paciente</button>
-                    </form>
-                </div>
-
-                <!-- Lista de pacientes -->
-                <div class="list-container">
-                    <h3>Lista de Pacientes</h3>
-                    <button onclick="loadPacientes()" class="btn-secondary">Actualizar Lista</button>
-                    <table id="pacientes-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Edad</th>
-                                <th>Dirección</th>
-                                <th>Teléfono</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Datos se cargan dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
             <!-- Consultas Avanzadas Section -->
             <section id="consultas" class="section">
-                <h2>📊 Consultas Avanzadas</h2>
-                <div class="consultas-container">
-                    <div class="consultas-buttons">
-                        <button class="btn-consulta" onclick="cargarConsulta('/api/consultas/pacientes-citas')">
-                            🔗 Pacientes + Citas (JOIN)
-                        </button>
-                        <button class="btn-consulta" onclick="cargarConsulta('/api/consultas/doctores-estadisticas')">
-                            📊 Estadísticas Doctores
-                        </button>
-                        <button class="btn-consulta" onclick="cargarConsulta('/api/consultas/pacientes-sin-citas')">
-                            ❌ Pacientes sin Citas (Subconsulta)
-                        </button>
-                        <button class="btn-consulta" onclick="cargarConsulta('/api/consultas/citas-proximas')">
-                            📅 Citas Próximas
-                        </button>
-                        <button class="btn-consulta" onclick="cargarConsulta('/api/consultas/diagnosticos-especialidad')">
-                            🏥 Diagnósticos por Especialidad (CTE)
-                        </button>
-                    </div>
-                    <div id="resultado-consulta" class="resultado-container"></div>
+                <h2>Consultas avanzadas</h2>
+
+                <div class="actions">
+                    <button type="button" onclick="cargarConsulta('pacientes-citas')">Pacientes con Citas</button>
+                    <button type="button" onclick="cargarConsulta('doctores-estadisticas')">Doctores - Estadísticas</button>
+                    <button type="button" onclick="cargarConsulta('pacientes-sin-citas')">Pacientes sin Citas</button>
+                    <button type="button" onclick="cargarConsulta('citas-proximas')">Citas próximas</button>
+                    <button type="button" onclick="cargarConsulta('diagnosticos-especialidad')">Diagnósticos por especialidad</button>
+                    <button type="button" onclick="cargarConsulta('diagnosticos-completos')">Diagnósticos completos</button>
+                    <button type="button" onclick="cargarConsulta('seguros-activos')">Seguros activos</button>
                 </div>
+
+                <h3 id="consulta-titulo"></h3>
+                <p id="consulta-descripcion"></p>
+                <div id="consulta-resultado"></div>
             </section>
+
+            <!-- Tablas Section -->
+            <div id="ver-tablas" class="section">
+            <h2>Visualización de Tablas</h2>
+    
+            <div class="button-grid">
+                <button onclick="cargarTabla('Pacientes')" class="btn">Pacientes</button>
+                <button onclick="cargarTabla('Doctores')" class="btn"> Doctores</button>
+                <button onclick="cargarTabla('Citas')" class="btn"> Citas</button>
+                <button onclick="cargarTabla('Diagnosticos')" class="btn"> Diagnósticos</button>
+                <button onclick="cargarTabla('Seguros')" class="btn"> Seguros</button>
+                <button onclick="cargarTabla('AuditoriaEliminar')" class="btn">Auditoría</button>
+            </div>
+    
+        <div id="tabla-resultado" class="result-container">
+        <div class="empty-state">
+            Selecciona una tabla para visualizar su contenido
+        </div>
+            </div>
+        </div>
+            <section id="crud" class="section">
+    <h2>CRUD</h2>
+    <div>
+    <label>Tabla:</label>
+    <select id="crud-tabla" onchange="renderCrudForm(this.value)">
+        <option value="Pacientes">Pacientes</option>
+        <option value="Doctores">Doctores</option>
+        <option value="Citas">Citas</option>
+    </select>
+    </div>
+
+    <div style="margin-top:8px;">
+    <label>ID (para actualizar/eliminar):</label>
+    <input id="crud-id" type="number" min="1" />
+    </div>
+
+    <form id="crud-form" onsubmit="return false" style="margin-top:8px;"></form>
+
+    <div style="margin-top:8px;">
+    <button onclick="crudCreate()">Crear</button>
+    <button onclick="crudUpdate()">Actualizar</button>
+    <button onclick="crudDelete()">Eliminar</button>
+    </div>
+
+    <div id="crud-msg" style="margin-top:8px;"></div>
+
+    <div id="crud-resultado" style="margin-top:12px;"></div>
+</section>
 
             <!-- API Documentation -->
             <section id="api" class="section">
                 <h2>Documentación de API</h2>
                 <div class="api-docs">
                     <h3>Endpoints Disponibles</h3>
+                    
                     <div class="endpoint">
                         <h4>GET /api/pacientes</h4>
-                        <p>Obtener todos los pacientes</p>
+                        <p>Obtener todos los pacientes activos (usa vista SQL)</p>
                         <pre><code>curl http://localhost:3000/api/pacientes</code></pre>
                     </div>
+                    
                     <div class="endpoint">
                         <h4>POST /api/pacientes</h4>
-                        <p>Crear nuevo paciente</p>
+                        <p>Crear nuevo paciente (usa Stored Procedure)</p>
                         <pre><code>{
-  "nombre": "Juan Pérez",
-  "edad": 45,
-  "direccion": "Calle Principal 123",
-  "telefono": "555-1234"
-}</code></pre>
+                            "nombre": "Juan Pérez",
+                            "edad": 45,
+                            "direccion": "Calle Principal 123",
+                            "telefono": "555-1234"
+                        }</code></pre>
                     </div>
+                    
+                    <div class="endpoint">
+                        <h4>PUT /api/pacientes/:id</h4>
+                        <p>Actualizar paciente (usa Stored Procedure)</p>
+                        <pre><code>curl -X PUT http://localhost:3000/api/pacientes/1 -d '{...}'</code></pre>
+                    </div>
+
+                    <div class="endpoint">
+                        <h4>DELETE /api/pacientes/:id</h4>
+                        <p>Eliminar paciente - Soft delete (usa Stored Procedure)</p>
+                        <pre><code>curl -X DELETE http://localhost:3000/api/pacientes/1</code></pre>
+                    </div>
+                    
                     <div class="endpoint">
                         <h4>GET /api/consultas/pacientes-citas</h4>
-                        <p>Consulta con INNER JOIN y LEFT JOIN</p>
+                        <p>Consulta con INNER JOIN (usa vista SQL)</p>
                         <pre><code>curl http://localhost:3000/api/consultas/pacientes-citas</code></pre>
                     </div>
+                    
                     <div class="endpoint">
                         <h4>GET /api/consultas/doctores-estadisticas</h4>
-                        <p>Estadísticas con GROUP BY y agregaciones</p>
+                        <p>Estadísticas con GROUP BY (usa vista SQL)</p>
                         <pre><code>curl http://localhost:3000/api/consultas/doctores-estadisticas</code></pre>
                     </div>
+
+                    <div class="endpoint">
+                        <h4>GET /api/tablas/:tabla</h4>
+                        <p>Ver contenido de cualquier tabla</p>
+                        <pre><code>curl http://localhost:3000/api/tablas/Pacientes</code></pre>
+                    </div>
+                </div>
+
+                <div class="api-docs">
+                    <h3>Características SQL Server</h3>
+                    <ul>
+                        <li>✅ <strong>Triggers:</strong> Auditoría automática de eliminaciones</li>
+                        <li>✅ <strong>Stored Procedures:</strong> CRUD de pacientes</li>
+                        <li>✅ <strong>Vistas:</strong> Consultas complejas optimizadas</li>
+                        <li>✅ <strong>Foreign Keys:</strong> Integridad referencial</li>
+                        <li>✅ <strong>Soft Delete:</strong> Eliminación lógica con campo Estado</li>
+                    </ul>
                 </div>
             </section>
         </main>
@@ -162,194 +188,11 @@
         <!-- Footer -->
         <footer>
             <p>&copy; 2025 Sistema de Gestión Hospitalaria. Todos los derechos reservados.</p>
-            <p>Desarrollado con Node.js + Express + SQLite</p>
+            <p>Desarrollado con Node.js + Express + SQL Server</p>
         </footer>
     </div>
 
-    <script src="js/script.js"></script>
-    <script>
-        function showSection(sectionId) {
-            // Ocultar todas las secciones
-            const sections = document.querySelectorAll('.section');
-            sections.forEach(section => section.classList.remove('active'));
-            
-            // Mostrar la sección seleccionada
-            document.getElementById(sectionId).classList.add('active');
-            
-            // Actualizar navegación
-            const links = document.querySelectorAll('.navbar a');
-            links.forEach(link => link.classList.remove('active'));
-            event.target.classList.add('active');
-        }
+    <script src="js/script.js" defer></script>
 
-        function cargarConsulta(endpoint) {
-            const resultDiv = document.getElementById('resultado-consulta');
-            resultDiv.innerHTML = '<p>Cargando...</p>';
-            
-            fetch(endpoint)
-                .then(r => r.json())
-                .then(d => {
-                    let html = '<h3>' + d.titulo + '</h3>';
-                    html += '<p><strong>' + d.descripcion + '</strong></p>';
-                    html += '<table class="data-table"><thead><tr>';
-                    
-                    if (d.data.length > 0) {
-                        Object.keys(d.data[0]).forEach(key => {
-                            html += '<th>' + key + '</th>';
-                        });
-                        html += '</tr></thead><tbody>';
-                        
-                        d.data.forEach(row => {
-                            html += '<tr>';
-                            Object.values(row).forEach(val => {
-                                html += '<td>' + (val || 'N/A') + '</td>';
-                            });
-                            html += '</tr>';
-                        });
-                    }
-                    
-                    html += '</tbody></table>';
-                    resultDiv.innerHTML = html;
-                })
-                .catch(e => {
-                    resultDiv.innerHTML = '<p style="color: red;">Error: ' + e.message + '</p>';
-                    console.error(e);
-                });
-        }
-
-        function loadPacientes() {
-            fetch('/api/pacientes')
-                .then(r => r.json())
-                .then(d => {
-                    const tbody = document.querySelector('#pacientes-table tbody');
-                    tbody.innerHTML = '';
-                    document.getElementById('total-pacientes').textContent = d.data.length;
-                    
-                    d.data.forEach(p => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td>${p.ID}</td>
-                            <td>${p.nombre}</td>
-                            <td>${p.edad}</td>
-                            <td>${p.direccion || 'N/A'}</td>
-                            <td>${p.telefono || 'N/A'}</td>
-                            <td>
-                                <button onclick="editPaciente(${p.ID})">Editar</button>
-                                <button onclick="deletePaciente(${p.ID})">Eliminar</button>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                })
-                .catch(e => console.error('Error:', e));
-        }
-
-        function createPaciente(event) {
-            event.preventDefault();
-            const nombre = document.getElementById('nombre').value;
-            const edad = document.getElementById('edad').value;
-            const direccion = document.getElementById('direccion').value;
-            const telefono = document.getElementById('telefono').value;
-            
-            fetch('/api/pacientes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre, edad, direccion, telefono })
-            })
-            .then(r => r.json())
-            .then(d => {
-                alert('Paciente creado: ' + d.data.nombre);
-                document.getElementById('paciente-form').reset();
-                loadPacientes();
-            })
-            .catch(e => alert('Error: ' + e.message));
-        }
-
-        function testConnection() {
-            fetch('/api/pacientes')
-                .then(() => alert('✓ Conexión exitosa'))
-                .catch(() => alert('✗ Error en conexión'));
-        }
-
-        function checkStatus() {
-            const statusDiv = document.getElementById('server-status');
-            fetch('/api/pacientes')
-                .then(() => {
-                    statusDiv.innerHTML = '✓ Servidor activo';
-                    statusDiv.style.color = 'green';
-                })
-                .catch(() => {
-                    statusDiv.innerHTML = '✗ Servidor inactivo';
-                    statusDiv.style.color = 'red';
-                });
-        }
-
-        // Cargar datos al iniciar
-        window.onload = () => {
-            loadPacientes();
-            checkStatus();
-        };
-    </script>
-
-    <style>
-        .consultas-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 10px;
-            margin: 20px 0;
-        }
-
-        .btn-consulta {
-            padding: 12px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .btn-consulta:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .resultado-container {
-            margin-top: 30px;
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 5px;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            background: white;
-        }
-
-        .data-table thead {
-            background: #333;
-            color: white;
-        }
-
-        .data-table th, .data-table td {
-            padding: 10px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-
-        .data-table tbody tr:nth-child(even) {
-            background: #f9f9f9;
-        }
-
-        .data-table tbody tr:hover {
-            background: #f0f0f0;
-        }
-    </style>
 </body>
 </html>

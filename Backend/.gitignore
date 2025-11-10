@@ -1,0 +1,119 @@
+# ===================================================
+# .gitignore - Hospital Management System (Node.js + SQL Server)
+# ===================================================
+
+# -------------------------------
+# Node.js / NPM / PNPM / Yarn
+# -------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.yarn-integrity
+.eslintcache
+.node_repl_history
+*.tgz
+
+# Si deseas versionar el lockfile, comenta la siguiente línea
+package-lock.json
+yarn.lock
+
+# -------------------------------
+# Entornos (NO subir credenciales)
+# -------------------------------
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# -------------------------------
+# Base de datos (artefactos binarios)
+# (Se versionan SOLO los scripts .sql)
+# -------------------------------
+*.bak
+*.mdf
+*.ldf
+*.db
+*.sqlite
+*.sqlite3
+database/backup/
+database/backups/
+database/data/
+database/**/*.bak
+database/**/*.mdf
+database/**/*.ldf
+database/**/*.tmp
+
+# -------------------------------
+# IDEs / Editores
+# -------------------------------
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.settings/
+.classpath
+.project
+.pydevproject
+*.swp
+*.swo
+*.sw?
+*~
+
+# -------------------------------
+# Sistema Operativo
+# -------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# -------------------------------
+# Logs
+# -------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# -------------------------------
+# Temporales / Builds / Cachés
+# -------------------------------
+.tmp/
+.temp/
+tmp/
+temp/
+dist/
+build/
+.cache/
+.parcel-cache/
+coverage/
+.nyc_output/
+.vuepress/dist
+*.tsbuildinfo
+
+# -------------------------------
+# Mapas de source del frontend
+# -------------------------------
+public/*.map
+public/**/*.map
+
+# -------------------------------
+# Binarios / compilados (genéricos)
+# -------------------------------
+*.o
+*.so
+*.exe
+*.jar
+*.class

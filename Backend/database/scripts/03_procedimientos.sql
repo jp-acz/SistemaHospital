@@ -1,322 +1,248 @@
--- database/scripts/03_procedimientos_hospital.sql
--- Procedimientos almacenados CRUD para el sistema hospitalario
-
+-- ========================================
+-- PROCEDIMIENTOS ALMACENADOS - CUMPLIENDO REQUISITO 3
+-- ========================================
 USE HospitalDB;
 GO
 
--- ===================================================
--- PROCEDIMIENTOS PARA PACIENTES
--- ===================================================
+PRINT '📋 Creando procedimientos almacenados...';
+GO
 
--- CREATE: Crear nuevo paciente
+-- =============================================
+-- REQUISITO 3a: CRUD COMPLETO PARA PACIENTES
+-- =============================================
+
+-- CREATE
 CREATE OR ALTER PROCEDURE sp_Pacientes_Create
-    @nombre VARCHAR(100),
+    @nombre CHAR(80),
     @edad INT,
-    @direccion VARCHAR(200),
-    @telefono VARCHAR(15)
+    @direccion VARCHAR(150) = NULL,
+    @telefono INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
-        BEGIN TRANSACTION;
-        
-        -- Validaciones
-        IF @edad < 0 OR @edad > 150
-        BEGIN
-            RAISERROR('La edad debe estar entre 0 y 150', 16, 1);
-            RETURN;
-        END
-        
         INSERT INTO Pacientes (nombre, edad, direccion, telefono)
         VALUES (@nombre, @edad, @direccion, @telefono);
         
-        SELECT 
-            ID, nombre, edad, direccion, telefono, 
-            FechaRegistro, Estado
-        FROM Pacientes 
-        WHERE ID = SCOPE_IDENTITY();
-        
-        COMMIT TRANSACTION;
+        SELECT ID, nombre, edad, direccion, telefono
+        FROM Pacientes WHERE ID = SCOPE_IDENTITY();
     END TRY
     BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        RAISERROR(ERROR_MESSAGE(), 16, 1);
+        THROW;
     END CATCH
 END
 GO
 
--- READ: Obtener todos los pacientes activos
+-- READ ALL
 CREATE OR ALTER PROCEDURE sp_Pacientes_ReadAll
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT 
-        ID, nombre, edad, direccion, telefono, 
-        FechaRegistro, Estado
+    SELECT ID, nombre, edad, direccion, telefono
     FROM Pacientes
-    WHERE Estado = 1
     ORDER BY nombre;
 END
 GO
 
--- READ: Obtener paciente por ID
-CREATE OR ALTER PROCEDURE sp_Pacientes_ReadById
-    @ID INT
+-- READ BY ID
+CREATE OR ALTER PROCEDURE sp_Pacientes_ReadByID
+    @id INT
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT 
-        ID, nombre, edad, direccion, telefono, 
-        FechaRegistro, Estado
+    SELECT ID, nombre, edad, direccion, telefono
     FROM Pacientes
-    WHERE ID = @ID;
+    WHERE ID = @id;
 END
 GO
 
--- UPDATE: Actualizar paciente
+-- UPDATE
 CREATE OR ALTER PROCEDURE sp_Pacientes_Update
-    @ID INT,
-    @nombre VARCHAR(100),
+    @id INT,
+    @nombre CHAR(80),
     @edad INT,
-    @direccion VARCHAR(200),
-    @telefono VARCHAR(15)
+    @direccion VARCHAR(150) = NULL,
+    @telefono INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-    BEGIN TRY
-        BEGIN TRANSACTION;
-        
-        IF NOT EXISTS (SELECT 1 FROM Pacientes WHERE ID = @ID)
-        BEGIN
-            RAISERROR('Paciente no existe', 16, 1);
-            RETURN;
-        END
-        
-        UPDATE Pacientes
-        SET nombre=@nombre, edad=@edad, direccion=@direccion, telefono=@telefono
-        WHERE ID = @ID;
-        
-        SELECT 
-            ID, nombre, edad, direccion, telefono, 
-            FechaRegistro, Estado
-        FROM Pacientes 
-        WHERE ID = @ID;
-        
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        RAISERROR(ERROR_MESSAGE(), 16, 1);
-    END CATCH
+    UPDATE Pacientes
+    SET nombre = @nombre, edad = @edad, direccion = @direccion, telefono = @telefono
+    WHERE ID = @id;
+    
+    SELECT ID, nombre, edad, direccion, telefono
+    FROM Pacientes WHERE ID = @id;
 END
 GO
 
--- DELETE: Eliminar paciente (soft delete)
+-- DELETE
 CREATE OR ALTER PROCEDURE sp_Pacientes_Delete
-    @ID INT
+    @id INT
 AS
 BEGIN
     SET NOCOUNT ON;
-    BEGIN TRY
-        BEGIN TRANSACTION;
-        
-        IF NOT EXISTS (SELECT 1 FROM Pacientes WHERE ID = @ID)
-        BEGIN
-            RAISERROR('Paciente no existe', 16, 1);
-            RETURN;
-        END
-        
-        UPDATE Pacientes SET Estado = 0 WHERE ID = @ID;
-        
-        COMMIT TRANSACTION;
-        SELECT 'Paciente eliminado exitosamente' AS Mensaje;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        RAISERROR(ERROR_MESSAGE(), 16, 1);
-    END CATCH
+    DELETE FROM Pacientes WHERE ID = @id;
 END
 GO
 
--- ===================================================
--- PROCEDIMIENTOS PARA DOCTORES
--- ===================================================
+-- =============================================
+-- REQUISITO 3a: CRUD COMPLETO PARA DOCTORES
+-- =============================================
 
--- CREATE: Crear nuevo doctor
 CREATE OR ALTER PROCEDURE sp_Doctores_Create
-    @nombre VARCHAR(100),
-    @especialidad VARCHAR(100),
-    @telefono VARCHAR(15)
+    @nombre CHAR(60),
+    @especialidad VARCHAR(50),
+    @telefono INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-    BEGIN TRY
-        BEGIN TRANSACTION;
-        
-        INSERT INTO Doctores (nombre, especialidad, telefono)
-        VALUES (@nombre, @especialidad, @telefono);
-        
-        SELECT 
-            ID, nombre, especialidad, telefono, 
-            FechaContratacion, Estado
-        FROM Doctores 
-        WHERE ID = SCOPE_IDENTITY();
-        
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        RAISERROR(ERROR_MESSAGE(), 16, 1);
-    END CATCH
+    INSERT INTO Doctores (nombre, especialidad, telefono)
+    VALUES (@nombre, @especialidad, @telefono);
+    
+    SELECT ID, nombre, especialidad, telefono
+    FROM Doctores WHERE ID = SCOPE_IDENTITY();
 END
 GO
 
--- READ: Obtener todos los doctores activos
 CREATE OR ALTER PROCEDURE sp_Doctores_ReadAll
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT 
-        ID, nombre, especialidad, telefono, 
-        FechaContratacion, Estado
+    SELECT ID, nombre, especialidad, telefono
     FROM Doctores
-    WHERE Estado = 1
     ORDER BY especialidad, nombre;
 END
 GO
 
--- READ: Obtener doctores por especialidad
-CREATE OR ALTER PROCEDURE sp_Doctores_PorEspecialidad
-    @especialidad VARCHAR(100)
+CREATE OR ALTER PROCEDURE sp_Doctores_Update
+    @id INT,
+    @nombre CHAR(60),
+    @especialidad VARCHAR(50),
+    @telefono INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT 
-        ID, nombre, especialidad, telefono, 
-        FechaContratacion, Estado
-    FROM Doctores
-    WHERE especialidad = @especialidad AND Estado = 1
-    ORDER BY nombre;
+    UPDATE Doctores
+    SET nombre = @nombre, especialidad = @especialidad, telefono = @telefono
+    WHERE ID = @id;
+    
+    SELECT ID, nombre, especialidad, telefono
+    FROM Doctores WHERE ID = @id;
 END
 GO
 
--- ===================================================
--- PROCEDIMIENTOS PARA CITAS (Maestra/Detalle)
--- ===================================================
+CREATE OR ALTER PROCEDURE sp_Doctores_Delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM Doctores WHERE ID = @id;
+END
+GO
 
--- CREATE: Crear cita con diagnóstico
-CREATE OR ALTER PROCEDURE sp_Citas_CreateConDiagnostico
+-- =============================================
+-- REQUISITO 3a: CRUD COMPLETO PARA CITAS
+-- =============================================
+
+CREATE OR ALTER PROCEDURE sp_Citas_Create
     @paciente_id INT,
     @doctor_id INT,
-    @fecha DATE,
-    @hora TIME,
-    @motivo TEXT,
-    @diagnostico TEXT,
-    @tratamiento TEXT,
-    @medicamentos TEXT = NULL,
-    @recomendaciones TEXT = NULL
+    @fecha DATETIME
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO Citas (paciente_id, doctor_id, fecha)
+    VALUES (@paciente_id, @doctor_id, @fecha);
+    
+    SELECT ID, paciente_id, doctor_id, fecha
+    FROM Citas WHERE ID = SCOPE_IDENTITY();
+END
+GO
+
+CREATE OR ALTER PROCEDURE sp_Citas_ReadAll
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT c.ID, c.paciente_id, p.nombre AS paciente_nombre,
+           c.doctor_id, d.nombre AS doctor_nombre, c.fecha
+    FROM Citas c
+    INNER JOIN Pacientes p ON c.paciente_id = p.ID
+    INNER JOIN Doctores d ON c.doctor_id = d.ID
+    ORDER BY c.fecha DESC;
+END
+GO
+
+CREATE OR ALTER PROCEDURE sp_Citas_Update
+    @id INT,
+    @paciente_id INT,
+    @doctor_id INT,
+    @fecha DATETIME
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE Citas
+    SET paciente_id = @paciente_id, doctor_id = @doctor_id, fecha = @fecha
+    WHERE ID = @id;
+    
+    SELECT ID, paciente_id, doctor_id, fecha
+    FROM Citas WHERE ID = @id;
+END
+GO
+
+CREATE OR ALTER PROCEDURE sp_Citas_Delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM Citas WHERE ID = @id;
+END
+GO
+
+-- =============================================
+-- REQUISITO 3b: PROCEDIMIENTO COMPUESTO
+-- Inserta Cita (maestra) + Diagnóstico (detalle)
+-- =============================================
+
+CREATE OR ALTER PROCEDURE sp_CitaConDiagnostico_Insert
+    @paciente_id INT,
+    @doctor_id INT,
+    @fecha DATETIME,
+    @diagnostico VARCHAR(200),
+    @tratamiento VARCHAR(300) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
         BEGIN TRANSACTION;
         
-        -- Validaciones
-        IF NOT EXISTS (SELECT 1 FROM Pacientes WHERE ID = @paciente_id AND Estado = 1)
-        BEGIN
-            RAISERROR('Paciente no existe o está inactivo', 16, 1);
-            RETURN;
-        END
+        -- Insertar en tabla maestra (Citas)
+        DECLARE @cita_id INT;
+        INSERT INTO Citas (paciente_id, doctor_id, fecha)
+        VALUES (@paciente_id, @doctor_id, @fecha);
         
-        IF NOT EXISTS (SELECT 1 FROM Doctores WHERE ID = @doctor_id AND Estado = 1)
-        BEGIN
-            RAISERROR('Doctor no existe o está inactivo', 16, 1);
-            RETURN;
-        END
+        SET @cita_id = SCOPE_IDENTITY();
         
-        -- Insertar cita
-        INSERT INTO Citas (paciente_id, doctor_id, fecha, hora, motivo, estado)
-        VALUES (@paciente_id, @doctor_id, @fecha, @hora, @motivo, 'Completada');
+        -- Insertar en tabla detalle (Diagnosticos)
+        INSERT INTO Diagnosticos (id_cita, diagnostico, tratamiento)
+        VALUES (@cita_id, @diagnostico, @tratamiento);
         
-        DECLARE @cita_id INT = SCOPE_IDENTITY();
-        
-        -- Insertar diagnóstico
-        INSERT INTO Diagnosticos (cita_id, diagnostico, tratamiento, medicamentos, recomendaciones)
-        VALUES (@cita_id, @diagnostico, @tratamiento, @medicamentos, @recomendaciones);
-        
-        -- Retornar información de cita y diagnóstico
-        SELECT 
-            c.ID AS CitaID,
-            p.nombre AS PacienteNombre,
-            d.nombre AS DoctorNombre,
-            c.fecha,
-            c.hora,
-            c.motivo,
-            diag.diagnostico,
-            diag.tratamiento
+        -- Retornar ambos registros insertados
+        SELECT c.ID AS CitaID, c.paciente_id, c.doctor_id, c.fecha,
+               d.ID AS DiagnosticoID, d.diagnostico, d.tratamiento
         FROM Citas c
-        INNER JOIN Pacientes p ON c.paciente_id = p.ID
-        INNER JOIN Doctores d ON c.doctor_id = d.ID
-        INNER JOIN Diagnosticos diag ON c.ID = diag.cita_id
+        INNER JOIN Diagnosticos d ON c.ID = d.id_cita
         WHERE c.ID = @cita_id;
         
         COMMIT TRANSACTION;
+        PRINT '✓ Cita y diagnóstico insertados correctamente';
     END TRY
     BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        RAISERROR(ERROR_MESSAGE(), 16, 1);
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
     END CATCH
 END
 GO
 
--- READ: Obtener citas de un paciente
-CREATE OR ALTER PROCEDURE sp_Citas_PorPaciente
-    @paciente_id INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT 
-        c.ID,
-        c.paciente_id,
-        p.nombre AS PacienteNombre,
-        c.doctor_id,
-        d.nombre AS DoctorNombre,
-        d.especialidad,
-        c.fecha,
-        c.hora,
-        c.estado,
-        c.motivo
-    FROM Citas c
-    INNER JOIN Pacientes p ON c.paciente_id = p.ID
-    INNER JOIN Doctores d ON c.doctor_id = d.ID
-    WHERE c.paciente_id = @paciente_id
-    ORDER BY c.fecha DESC;
-END
-GO
-
--- READ: Obtener agenda de un doctor
-CREATE OR ALTER PROCEDURE sp_Citas_PorDoctor
-    @doctor_id INT,
-    @fecha DATE = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT 
-        c.ID,
-        c.paciente_id,
-        p.nombre AS PacienteNombre,
-        c.doctor_id,
-        c.fecha,
-        c.hora,
-        c.estado,
-        c.motivo
-    FROM Citas c
-    INNER JOIN Pacientes p ON c.paciente_id = p.ID
-    WHERE c.doctor_id = @doctor_id
-    AND (@fecha IS NULL OR c.fecha = @fecha)
-    ORDER BY c.fecha, c.hora;
-END
-GO
-
-PRINT '✓ Procedimientos almacenados creados exitosamente';
+PRINT '✓ Procedimientos almacenados creados correctamente';
 GO

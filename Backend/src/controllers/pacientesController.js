@@ -1,105 +1,106 @@
-// Backend/src/controllers/pacientesController.js
-const { executeQuery, executeRun } = require('../config/database');
+const { executeQuery } = require('../config/database');
 
-class PacientesController {
-  async create(req, res) {
+// GET ALL
+exports.getAll = async (req, res) => {
     try {
-      const { nombre, edad, direccion, telefono } = req.body;
-      const result = await executeRun(
-        'INSERT INTO Pacientes (nombre, edad, direccion, telefono) VALUES (?, ?, ?, ?)',
-        [nombre, edad, direccion, telefono]
-      );
-      res.status(201).json({
-        success: true,
-        message: 'Paciente creado exitosamente',
-        data: { ID: result.lastID, nombre, edad, direccion, telefono }
-      });
+        const data = await executeQuery('SELECT ID, nombre, edad, direccion, telefono FROM Pacientes ORDER BY nombre');
+        res.json({ success: true, data });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error al crear paciente',
-        error: error.message
-      });
+        console.error('Error en getAll:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-  }
+};
 
-  async getAll(req, res) {
+// GET BY ID
+exports.getById = async (req, res) => {
     try {
-      const result = await executeQuery('SELECT * FROM Pacientes WHERE Estado = 1');
-      res.status(200).json({
-        success: true,
-        data: result
-      });
+        const { id } = req.params;
+        const data = await executeQuery(
+            'SELECT ID, nombre, edad, direccion, telefono FROM Pacientes WHERE ID = @id',
+            { id }
+        );
+        
+        if (data.length === 0) {
+            return res.status(404).json({ success: false, message: 'Paciente no encontrado' });
+        }
+        
+        res.json({ success: true, data: data[0] });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener pacientes',
-        error: error.message
-      });
+        console.error('Error en getById:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-  }
+};
 
-  async getById(req, res) {
+// CREATE
+exports.create = async (req, res) => {
     try {
-      const { id } = req.params;
-      const result = await executeQuery('SELECT * FROM Pacientes WHERE ID = ? AND Estado = 1', [id]);
-      if (result.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'Paciente no encontrado'
+        const { nombre, edad, direccion, telefono } = req.body;
+        
+        if (!nombre || !edad) {
+            return res.status(400).json({ success: false, message: 'Nombre y edad son obligatorios' });
+        }
+
+        const query = `
+            INSERT INTO Pacientes (nombre, edad, direccion, telefono)
+            VALUES (@nombre, @edad, @direccion, @telefono);
+            SELECT ID, nombre, edad, direccion, telefono 
+            FROM Pacientes WHERE ID = SCOPE_IDENTITY();
+        `;
+        
+        const result = await executeQuery(query, { 
+            nombre, 
+            edad: parseInt(edad), 
+            direccion: direccion || null, 
+            telefono: telefono ? parseInt(telefono) : null 
         });
-      }
-      res.status(200).json({
-        success: true,
-        data: result
-      });
+        
+        res.json({ success: true, data: result[0], message: 'Paciente creado' });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error al obtener paciente',
-        error: error.message
-      });
+        console.error('Error en create:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-  }
+};
 
-  async update(req, res) {
+// UPDATE
+exports.update = async (req, res) => {
     try {
-      const { id } = req.params;
-      const { nombre, edad, direccion, telefono } = req.body;
-      await executeRun(
-        'UPDATE Pacientes SET nombre = ?, edad = ?, direccion = ?, telefono = ? WHERE ID = ?',
-        [nombre, edad, direccion, telefono, id]
-      );
-      res.status(200).json({
-        success: true,
-        message: 'Paciente actualizado exitosamente',
-        data: { ID: id, nombre, edad, direccion, telefono }
-      });
+        const { id } = req.params;
+        const { nombre, edad, direccion, telefono } = req.body;
+        
+        const query = `
+            UPDATE Pacientes 
+            SET nombre = @nombre, edad = @edad, direccion = @direccion, telefono = @telefono
+            WHERE ID = @id;
+            SELECT ID, nombre, edad, direccion, telefono FROM Pacientes WHERE ID = @id;
+        `;
+        
+        const result = await executeQuery(query, { 
+            id: parseInt(id), 
+            nombre, 
+            edad: parseInt(edad), 
+            direccion, 
+            telefono: telefono ? parseInt(telefono) : null 
+        });
+        
+        if (result.length === 0) {
+            return res.status(404).json({ success: false, message: 'Paciente no encontrado' });
+        }
+        
+        res.json({ success: true, data: result[0], message: 'Paciente actualizado' });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error al actualizar paciente',
-        error: error.message
-      });
+        console.error('Error en update:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-  }
+};
 
-  async delete(req, res) {
+// DELETE
+exports.delete = async (req, res) => {
     try {
-      const { id } = req.params;
-      await executeRun('UPDATE Pacientes SET Estado = 0 WHERE ID = ?', [id]);
-      res.status(200).json({
-        success: true,
-        message: 'Paciente eliminado exitosamente'
-      });
+        const { id } = req.params;
+        await executeQuery('DELETE FROM Pacientes WHERE ID = @id', { id: parseInt(id) });
+        res.json({ success: true, message: 'Paciente eliminado' });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error al eliminar paciente',
-        error: error.message
-      });
+        console.error('Error en delete:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-  }
-}
-
-module.exports = new PacientesController();
+};

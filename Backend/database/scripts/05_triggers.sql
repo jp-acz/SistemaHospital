@@ -1,226 +1,263 @@
--- database/scripts/05_triggers_hospital.sql
--- Triggers para auditoría, validación y control de datos
-
+-- ========================================
+-- TRIGGERS - Cumpliendo requisito 6
+-- ========================================
 USE HospitalDB;
 GO
 
--- ===================================================
--- TRIGGER 1 (AFTER INSERT, UPDATE, DELETE): Auditoría en Pacientes
--- ===================================================
-CREATE OR ALTER TRIGGER trg_Pacientes_Auditoria
+PRINT '🔔 Creando triggers...';
+GO
+
+-- =============================================
+-- Verificar y ajustar tabla de auditoría
+-- =============================================
+IF EXISTS (SELECT 1 FROM sys.columns 
+           WHERE object_id = OBJECT_ID('AuditoriaEliminar') 
+           AND name = 'fechaEliminacion')
+BEGIN
+    PRINT '✓ Tabla AuditoriaEliminar ya tiene la columna correcta';
+END
+ELSE
+BEGIN
+    -- Si la tabla existe con nombre diferente de columna, DROP y recrear
+    IF OBJECT_ID('AuditoriaEliminar', 'U') IS NOT NULL
+    BEGIN
+        DROP TABLE AuditoriaEliminar;
+        PRINT '⚠️  Tabla AuditoriaEliminar eliminada para recreación';
+    END
+    
+    CREATE TABLE AuditoriaEliminar (
+        ID INT PRIMARY KEY IDENTITY(1,1),
+        tabla VARCHAR(50) NOT NULL,
+        registroID INT NOT NULL,
+        usuario VARCHAR(100) DEFAULT SYSTEM_USER,
+        fechaEliminacion DATETIME DEFAULT GETDATE()
+    );
+    PRINT '✓ Tabla AuditoriaEliminar creada correctamente';
+END
+GO
+
+-- =============================================
+-- TRIGGER 1: Auditoría de eliminaciones (AFTER DELETE)
+-- Requisito 6.1: Trigger de auditoría
+-- =============================================
+
+-- Trigger para Pacientes
+CREATE OR ALTER TRIGGER trg_Pacientes_AuditDelete
 ON Pacientes
-AFTER INSERT, UPDATE, DELETE
+AFTER DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
     
-    DECLARE @Operacion VARCHAR(10);
-    DECLARE @DatosAnteriores NVARCHAR(MAX);
-    DECLARE @DatosNuevos NVARCHAR(MAX);
+    INSERT INTO AuditoriaEliminar (tabla, registroID, usuario, fechaEliminacion)
+    SELECT 
+        'Pacientes',
+        d.ID,
+        SYSTEM_USER,
+        GETDATE()
+    FROM DELETED d;
     
-    -- Determinar tipo de operación
-    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
-        SET @Operacion = 'UPDATE'
-    ELSE IF EXISTS (SELECT * FROM inserted)
-        SET @Operacion = 'INSERT'
-    ELSE
-        SET @Operacion = 'DELETE';
-    
-    -- Capturar datos
-    IF EXISTS (SELECT * FROM deleted)
-        SELECT @DatosAnteriores = (SELECT * FROM deleted FOR JSON PATH);
-    
-    IF EXISTS (SELECT * FROM inserted)
-        SELECT @DatosNuevos = (SELECT * FROM inserted FOR JSON PATH);
-    
-    -- Registrar en auditoría
-    INSERT INTO LOG_AUDITORIA (TablaAfectada, TipoOperacion, UsuarioOperacion, DatosAnteriores, DatosNuevos)
-    VALUES ('Pacientes', @Operacion, SYSTEM_USER, @DatosAnteriores, @DatosNuevos);
+    PRINT 'Trigger: Paciente(s) eliminado(s) - Auditoría registrada';
 END
 GO
 
--- ===================================================
--- TRIGGER 2 (AFTER INSERT, UPDATE, DELETE): Auditoría en Citas
--- ===================================================
-CREATE OR ALTER TRIGGER trg_Citas_Auditoria
-ON Citas
-AFTER INSERT, UPDATE, DELETE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    DECLARE @Operacion VARCHAR(10);
-    DECLARE @DatosAnteriores NVARCHAR(MAX);
-    DECLARE @DatosNuevos NVARCHAR(MAX);
-    
-    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
-        SET @Operacion = 'UPDATE'
-    ELSE IF EXISTS (SELECT * FROM inserted)
-        SET @Operacion = 'INSERT'
-    ELSE
-        SET @Operacion = 'DELETE';
-    
-    IF EXISTS (SELECT * FROM deleted)
-        SELECT @DatosAnteriores = (SELECT * FROM deleted FOR JSON PATH);
-    
-    IF EXISTS (SELECT * FROM inserted)
-        SELECT @DatosNuevos = (SELECT * FROM inserted FOR JSON PATH);
-    
-    INSERT INTO LOG_AUDITORIA (TablaAfectada, TipoOperacion, UsuarioOperacion, DatosAnteriores, DatosNuevos)
-    VALUES ('Citas', @Operacion, SYSTEM_USER, @DatosAnteriores, @DatosNuevos);
-END
-GO
-
--- ===================================================
--- TRIGGER 3 (INSTEAD OF DELETE): Soft delete en Pacientes
--- ===================================================
-CREATE OR ALTER TRIGGER trg_Pacientes_SoftDelete
-ON Pacientes
-INSTEAD OF DELETE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    -- En lugar de eliminar, marcar como inactivo
-    UPDATE Pacientes
-    SET Estado = 0
-    FROM Pacientes p
-    INNER JOIN deleted d ON p.ID = d.ID;
-    
-    -- Registrar en auditoría
-    INSERT INTO LOG_AUDITORIA (TablaAfectada, TipoOperacion, UsuarioOperacion, DatosAnteriores)
-    SELECT 'Pacientes', 'SOFT_DELETE', SYSTEM_USER, (SELECT * FROM deleted FOR JSON PATH);
-END
-GO
-
--- ===================================================
--- TRIGGER 4 (INSTEAD OF DELETE): Soft delete en Doctores
--- ===================================================
-CREATE OR ALTER TRIGGER trg_Doctores_SoftDelete
+-- Trigger para Doctores
+CREATE OR ALTER TRIGGER trg_Doctores_AuditDelete
 ON Doctores
-INSTEAD OF DELETE
+AFTER DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
     
-    UPDATE Doctores
-    SET Estado = 0
-    FROM Doctores d
-    INNER JOIN deleted del ON d.ID = del.ID;
+    INSERT INTO AuditoriaEliminar (tabla, registroID, usuario, fechaEliminacion)
+    SELECT 
+        'Doctores',
+        d.ID,
+        SYSTEM_USER,
+        GETDATE()
+    FROM DELETED d;
     
-    INSERT INTO LOG_AUDITORIA (TablaAfectada, TipoOperacion, UsuarioOperacion, DatosAnteriores)
-    SELECT 'Doctores', 'SOFT_DELETE', SYSTEM_USER, (SELECT * FROM deleted FOR JSON PATH);
+    PRINT 'Trigger: Doctor(es) eliminado(s) - Auditoría registrada';
 END
 GO
 
--- ===================================================
--- TRIGGER 5 (AFTER INSERT): Validación de citas duplicadas
--- ===================================================
-CREATE OR ALTER TRIGGER trg_Citas_ValidarDuplicadas
+-- Trigger para Citas
+CREATE OR ALTER TRIGGER trg_Citas_AuditDelete
 ON Citas
-AFTER INSERT
+AFTER DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
     
-    -- Validar que no haya dos citas del mismo doctor en la misma fecha/hora
-    IF EXISTS (
-        SELECT 1
-        FROM Citas c1
-        INNER JOIN inserted i ON c1.doctor_id = i.doctor_id 
-                               AND c1.fecha = i.fecha 
-                               AND c1.hora = i.hora
-                               AND c1.ID != i.ID
-    )
-    BEGIN
-        ROLLBACK TRANSACTION;
-        RAISERROR('El doctor ya tiene una cita a esa fecha y hora', 16, 1);
-        RETURN;
-    END
+    INSERT INTO AuditoriaEliminar (tabla, registroID, usuario, fechaEliminacion)
+    SELECT 
+        'Citas',
+        d.ID,
+        SYSTEM_USER,
+        GETDATE()
+    FROM DELETED d;
     
-    -- Validar que el paciente no tenga citas a la misma fecha/hora
-    IF EXISTS (
-        SELECT 1
-        FROM Citas c1
-        INNER JOIN inserted i ON c1.paciente_id = i.paciente_id 
-                               AND c1.fecha = i.fecha 
-                               AND c1.hora = i.hora
-                               AND c1.ID != i.ID
-    )
-    BEGIN
-        ROLLBACK TRANSACTION;
-        RAISERROR('El paciente ya tiene una cita a esa fecha y hora', 16, 1);
-        RETURN;
-    END
+    PRINT 'Trigger: Cita(s) eliminada(s) - Auditoría registrada';
 END
 GO
 
--- ===================================================
--- TRIGGER 6 (AFTER INSERT): Validación de diagnósticos
--- ===================================================
-CREATE OR ALTER TRIGGER trg_Diagnosticos_Validacion
-ON Diagnosticos
-AFTER INSERT
+-- =============================================
+-- TRIGGER 2: Validación de datos (INSTEAD OF INSERT)
+-- Requisito 6.2: Trigger de validación
+-- =============================================
+
+CREATE OR ALTER TRIGGER trg_Pacientes_ValidateInsert
+ON Pacientes
+INSTEAD OF INSERT
 AS
 BEGIN
     SET NOCOUNT ON;
     
-    -- Validar que no haya dos diagnósticos para la misma cita
-    IF EXISTS (
-        SELECT 1
-        FROM Diagnosticos d1
-        INNER JOIN inserted i ON d1.cita_id = i.cita_id
-        WHERE d1.ID != i.ID
-    )
+    -- Validar edad
+    IF EXISTS (SELECT 1 FROM INSERTED WHERE edad < 0 OR edad > 150)
     BEGIN
+        RAISERROR('Trigger: Edad inválida (debe estar entre 0 y 150)', 16, 1);
         ROLLBACK TRANSACTION;
-        RAISERROR('Esta cita ya tiene un diagnóstico registrado', 16, 1);
         RETURN;
     END
     
-    -- Cambiar estado de cita a Completada
-    UPDATE Citas
-    SET estado = 'Completada'
-    FROM Citas c
-    INNER JOIN inserted i ON c.ID = i.cita_id;
+    -- Validar nombre no vacío
+    IF EXISTS (SELECT 1 FROM INSERTED WHERE LTRIM(RTRIM(nombre)) = '')
+    BEGIN
+        RAISERROR('Trigger: Nombre no puede estar vacío', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    
+    -- Si validación OK, insertar
+    INSERT INTO Pacientes (nombre, edad, direccion, telefono)
+    SELECT nombre, edad, direccion, telefono
+    FROM INSERTED;
+    
+    PRINT 'Trigger: Paciente insertado después de validación';
 END
 GO
 
--- ===================================================
--- TRIGGER 7 (AFTER INSERT, UPDATE, DELETE): Auditoría en Diagnosticos
--- ===================================================
-CREATE OR ALTER TRIGGER trg_Diagnosticos_Auditoria
-ON Diagnosticos
-AFTER INSERT, UPDATE, DELETE
+-- =============================================
+-- TRIGGER 3: Auditoría de actualizaciones (AFTER UPDATE)
+-- =============================================
+
+-- Crear tabla de auditoría de actualizaciones si no existe
+IF OBJECT_ID('AuditoriaActualizaciones', 'U') IS NULL
+BEGIN
+    CREATE TABLE AuditoriaActualizaciones (
+        ID INT PRIMARY KEY IDENTITY(1,1),
+        tabla VARCHAR(50) NOT NULL,
+        registroID INT NOT NULL,
+        campoModificado VARCHAR(100),
+        valorAnterior VARCHAR(500),
+        valorNuevo VARCHAR(500),
+        usuario VARCHAR(100) DEFAULT SYSTEM_USER,
+        fechaModificacion DATETIME DEFAULT GETDATE()
+    );
+    PRINT '✓ Tabla AuditoriaActualizaciones creada';
+END
+GO
+
+CREATE OR ALTER TRIGGER trg_Doctores_AuditUpdate
+ON Doctores
+AFTER UPDATE
 AS
 BEGIN
     SET NOCOUNT ON;
     
-    DECLARE @Operacion VARCHAR(10);
-    DECLARE @DatosAnteriores NVARCHAR(MAX);
-    DECLARE @DatosNuevos NVARCHAR(MAX);
+    -- Auditar cambio de especialidad
+    IF UPDATE(especialidad)
+    BEGIN
+        INSERT INTO AuditoriaActualizaciones (tabla, registroID, campoModificado, valorAnterior, valorNuevo)
+        SELECT 
+            'Doctores',
+            i.ID,
+            'especialidad',
+            d.especialidad,
+            i.especialidad
+        FROM INSERTED i
+        INNER JOIN DELETED d ON i.ID = d.ID
+        WHERE i.especialidad <> d.especialidad;
+    END
     
-    IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
-        SET @Operacion = 'UPDATE'
-    ELSE IF EXISTS (SELECT * FROM inserted)
-        SET @Operacion = 'INSERT'
-    ELSE
-        SET @Operacion = 'DELETE';
-    
-    IF EXISTS (SELECT * FROM deleted)
-        SELECT @DatosAnteriores = (SELECT * FROM deleted FOR JSON PATH);
-    
-    IF EXISTS (SELECT * FROM inserted)
-        SELECT @DatosNuevos = (SELECT * FROM inserted FOR JSON PATH);
-    
-    INSERT INTO LOG_AUDITORIA (TablaAfectada, TipoOperacion, UsuarioOperacion, DatosAnteriores, DatosNuevos)
-    VALUES ('Diagnosticos', @Operacion, SYSTEM_USER, @DatosAnteriores, @DatosNuevos);
+    PRINT 'Trigger: Actualización de doctor auditada';
 END
 GO
 
-PRINT '✓ Triggers creados exitosamente';
-PRINT '  - Auditoría en Pacientes, Citas y Diagnósticos';
-PRINT '  - Soft delete en Pacientes y Doctores';
-PRINT '  - Validación de citas duplicadas';
-PRINT '  - Validación de diagnósticos únicos por cita';
+-- =============================================
+-- TRIGGER 4: Validación de citas (INSTEAD OF INSERT)
+-- Requisito 6.2: Evita citas en fechas pasadas
+-- =============================================
+
+CREATE OR ALTER TRIGGER trg_Citas_ValidateFecha
+ON Citas
+INSTEAD OF INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Validar fecha no en el pasado (solo validar fecha, no hora)
+    IF EXISTS (SELECT 1 FROM INSERTED WHERE CAST(fecha AS DATE) < CAST(GETDATE() AS DATE))
+    BEGIN
+        RAISERROR('Trigger: No se pueden crear citas en fechas pasadas', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    
+    -- Validar que existan paciente y doctor
+    IF EXISTS (SELECT 1 FROM INSERTED WHERE paciente_id NOT IN (SELECT ID FROM Pacientes))
+    BEGIN
+        RAISERROR('Trigger: Paciente no existe', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    
+    IF EXISTS (SELECT 1 FROM INSERTED WHERE doctor_id NOT IN (SELECT ID FROM Doctores))
+    BEGIN
+        RAISERROR('Trigger: Doctor no existe', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    
+    -- Si validación OK, insertar
+    INSERT INTO Citas (paciente_id, doctor_id, fecha)
+    SELECT paciente_id, doctor_id, fecha
+    FROM INSERTED;
+    
+    PRINT 'Trigger: Cita insertada después de validación';
+END
+GO
+
+PRINT '✓ Todos los triggers creados correctamente';
+GO
+
+-- =============================================
+-- DOCUMENTACIÓN DE TRIGGERS
+-- =============================================
+PRINT '';
+PRINT '📖 DOCUMENTACIÓN DE TRIGGERS:';
+PRINT '';
+PRINT '1. trg_Pacientes_AuditDelete (AFTER DELETE)';
+PRINT '   - Registra eliminaciones en AuditoriaEliminar';
+PRINT '   - Usa tabla virtual DELETED';
+PRINT '';
+PRINT '2. trg_Doctores_AuditDelete (AFTER DELETE)';
+PRINT '   - Auditoría de eliminación de doctores';
+PRINT '';
+PRINT '3. trg_Citas_AuditDelete (AFTER DELETE)';
+PRINT '   - Auditoría de eliminación de citas';
+PRINT '';
+PRINT '4. trg_Pacientes_ValidateInsert (INSTEAD OF INSERT)';
+PRINT '   - Valida edad (0-150) y nombre no vacío';
+PRINT '   - Usa tabla virtual INSERTED';
+PRINT '';
+PRINT '5. trg_Doctores_AuditUpdate (AFTER UPDATE)';
+PRINT '   - Registra cambios de especialidad';
+PRINT '   - Compara INSERTED vs DELETED';
+PRINT '';
+PRINT '6. trg_Citas_ValidateFecha (INSTEAD OF INSERT)';
+PRINT '   - Evita citas en fechas pasadas';
+PRINT '   - Valida existencia de paciente y doctor';
+PRINT '';
 GO
